@@ -1,14 +1,26 @@
-import Fluent
 import Vapor
 
-func routes(_ app: Application) throws {
-    app.get { req in
-        return req.view.render("index", ["title": "Hello Vapor!"])
-    }app.get { req in
-        return "It works!"
-    }
+/// Register your application's routes here.
+public func routes(_ router: Router) throws {
 
-    app.get("hello") { req -> String in
-        return "Hello, world!"
-    }
+    // Basic "It works" example
+   // router.get("sus-api") { req in
+   //     return "SUS API works!"
+  //  }
+
+    let susController = SusController()
+    
+
+    router.get("sus-api", use: susController.getProjectListExtended)
+    router.get("sus-api/susscores", use: susController.index)
+    router.get("sus-api/susscores/", String.parameter, use: susController.getProjectData)
+    router.get("sus-api/susscores/download", String.parameter, use: susController.getProjectDataCsv)
+    
+    router.get("sus-api/util/get-new-auth-key", use: susController.getNewKey)
+    
+    router.post("sus-api/susscore", use: susController.create)
+    router.delete("sus-api/susscore", SusScore.parameter, use: susController.delete)
+    
+    router.get("sus-api/susscores/summary", String.parameter, use: susController.getProjectSumary)
+    
 }
