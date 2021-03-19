@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <title>SUS Project Summary, #(projectId)</title>
 
-    #embed("head.html")
+    #extend("head.html.leaf"):
+
+    #endextend
 
 </head>
 
 <body>
 
-#if(observationsCount > 0) {
+#if(observationsCount > 0):
 
 	<h1>#(projectId)</h1>
 
@@ -35,10 +37,10 @@
 		
 		<a href="/sus-api/susscores/download/#(projectId)">Download project data (csv format)</a>
 	</div>
-} else {
-	
+#else:
+
 	<h1>The project "#(projectId)" does not have any data. </h1>
-}
+#endif
 
 
 </body>
