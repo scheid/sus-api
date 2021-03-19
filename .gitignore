@@ -6,4 +6,5 @@ DerivedData/
 .DS_Store
 sus-scores.sqlite
 .swiftpm
+Package.resolved
 
