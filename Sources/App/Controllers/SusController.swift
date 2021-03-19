@@ -116,7 +116,7 @@ final class SusController {
             
             let items = sqlDb.raw("""
                
-            SELECT DISTINCT projectId FROM `SusScore`;
+            SELECT DISTINCT project_id FROM `SusScore`;
                
             """).all()
         
@@ -179,7 +179,7 @@ final class SusController {
             
             let items = sqlDb.raw("""
                
-            SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
+            SELECT * FROM `SusScore` WHERE project_id=="\(projectId)";
                
             """).all(decoding: SusScore.self)
             
@@ -251,7 +251,7 @@ final class SusController {
         if let sqlDb = request.db as? SQLDatabase {
             let items = sqlDb.raw("""
                
-            SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
+            SELECT * FROM `SusScore` WHERE project_id=="\(projectId)";
                
             """).all(decoding: SusScore.self)
             
@@ -424,7 +424,7 @@ final class SusController {
         if let sqlDb = request.db as? SQLDatabase {
             return sqlDb.raw("""
                 
-             SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
+             SELECT * FROM `SusScore` WHERE project_id=="\(projectId)";
                 
              """).all(decoding: SusScore.self)
             
@@ -462,7 +462,7 @@ final class SusController {
             
             return sqlDb.raw("""
                
-               DELETE FROM `SusScore` WHERE projectId=="\(projectId)";
+               DELETE FROM `SusScore` WHERE project_id=="\(projectId)";
                 
                """).all(decoding: SusScore.self)
             
