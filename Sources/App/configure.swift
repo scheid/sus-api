@@ -25,8 +25,8 @@ public func configure(_ app: Application) throws {
    // app.migrations.add(CreateTable())
  
     
-  //  app.http.server.configuration.port = 9292
-  //  app.http.server.configuration.hostname = "0.0.0.0"
+    app.http.server.configuration.port = 9292
+    app.http.server.configuration.hostname = "0.0.0.0"
 
     
     // uncomment to serve files from /Public folder
