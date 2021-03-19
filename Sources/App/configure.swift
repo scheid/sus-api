@@ -22,7 +22,7 @@ public func configure(_ app: Application) throws {
     app.databases.use(.sqlite(.file(dbPath)), as: .sqlite)
     
  
-   // app.migrations.add(CreateTable())
+    app.migrations.add(CreateTable())
  
     
     app.http.server.configuration.port = 9292
