@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUS Project List</title>
+    
+	#extend("head.html.leaf"):
+
+	#endextend
+
+</head>
+<body>
+
+<h1 style="margin-bottom: 32px;">SUS Projects</h1>
+
+<div style="margin-top: 32px;"><a class="btn btn-outline-secondary" target="_blank" href="/sus">Start a new SUS survey for a new project</a> </div>
+
+#if(projectCount > 0):
+
+    <table style="margin-top: 32px;">
+	<tr>
+		<th></th>
+		<th>project name</th>
+		<th>Mean SUS Score</th>
+		<th>Number of Responses</th>
+		<th>Date Range of Responses</th>
+
+	</tr>
+
+	#for(project in projectSummaries):
+
+	    <tr>
+            <td>
+				<div class="dropdown">
+				  <a style="font-size: 9px;color: #999999" class="btn btn btn-link dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				    &bull; &bull; &bull;
+				  </a>
+
+				  <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+				    <a class="dropdown-item" target="_blank" href="/sus/#/project/#(project.projectId)">Start a New SUS Survey for '#(project.projectId)'</a>
+				    <a class="dropdown-item" href="/sus-api/susscores/download/#(project.projectId)">Download all data for '#(project.projectId)' (csv format)</a>				   
+				  </div>
+				</div>
+
+			</td>
+
+	    	<td style="padding: 12px"><a href="/sus-api/susscores/summary/#(project.projectId)">#(project.projectId)</a></td>
+	    	<td style="padding: 12px;font-weight: bold;font-size:larger;">#(project.susScoreMeanFormatted)</td>
+	    	<td style="padding: 12px">#(project.observationsCount)</td>
+	    	<td style="padding: 12px">#(project.minDateFormatted) <span style="font-size:smaller;color:#999999">to</span> #(project.maxDateFormatted)</td>
+
+	    </tr>
+
+    #endfor
+
+	</table>
+
+#else:
+	<div style="font-size: 20px;color: #999999; margin-top: 64px;">(There are no projects to show) </h1>
+#endif
+
+
+#extend("bootstrap-footer.html.leaf"):
+
+#endextend
+
+</body>
+</html>

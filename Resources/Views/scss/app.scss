@@ -1,0 +1,118 @@
+
+$primary: #007d8a;
+$text: #464646;
+
+html, body {
+    font-family: Lato, Roboto, sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    color: $text;
+    line-height: 1.5em;
+}
+
+
+
+body {
+    padding: 50px;
+}
+
+.btn-link, .btn-link:hover {
+    font-weight: 400;
+    color: $primary;
+    background-color:
+    transparent;
+}
+
+.dropdown-toggle::after {
+    content: none;
+}
+
+
+
+a {
+    text-decoration: none;
+    color: $primary;
+}
+
+pre, code {
+    font-family: "Roboto Mono", monospace;
+}
+
+h1, h2, h3 {
+    margin-top: 32px;
+    margin-bottom: 4px;
+    font-weight: 400;
+}
+
+h4 {
+    font-size: 17px;
+    margin-top: 36px;
+    margin-bottom: 4px;
+    
+}
+
+h1 {
+    font-size: 32px;
+}
+
+h2 {
+    font-size: 24px;
+}
+
+h3 {
+    font-size: 20px;
+}
+
+table {
+    
+    margin-top: 4px;
+    border-collapse: collapse;
+
+    th {
+       text-align: left;
+       padding-top: 4px;
+       padding-bottom: 4px;
+       padding-left: 8px;
+       padding-right: 24px;
+       font-size: 14px;
+       color: #999999;
+       font-weight: normal;
+    }
+    
+    td.row-lines {
+       padding-top: 4px;
+       padding-bottom: 4px;
+       padding-left: 8px;
+       padding-right: 24px;
+       vertical-align: top;
+       border-bottom: 1px solid #e3e3e3;
+    
+    }
+    
+    
+    
+    td {
+    
+       padding-top: 4px;
+       padding-bottom: 4px;
+       padding-left: 8px;
+       padding-right: 24px;
+       vertical-align: top;
+     
+    }
+    
+
+}
+
+
+.deemph {
+   color: #999999;
+   font-size:smaller;
+}
+
+.value {
+    font-family: "Roboto Mono", monospace;
+    text-align:right;
+    font-weight: 700;
+    color: #222222;
+}

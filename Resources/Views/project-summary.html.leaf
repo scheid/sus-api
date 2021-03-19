@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUS Project Summary, #(projectId)</title>
+
+    #embed("head.html")
+
+</head>
+
+<body>
+
+#if(observationsCount > 0) {
+
+	<h1>#(projectId)</h1>
+
+		<table style="margin-top: 32px;" >
+			<tr>
+				<td style="text-align:center">
+					<div style="font-size:64px;line-height:64px;">#(susScoreMeanFormatted)</div>
+					<div style="color: #999999">Mean SUS Score</div>
+				</td>
+
+                 <td style="text-align:center">
+					<div style="font-size:64px;line-height:64px;">#(observationsCount)</div>
+					<div style="color: #999999">Number of Participants</div>
+				</td>
+
+			</tr>
+			
+
+		</table>
+    
+	<div style="margin-top: 32px">
+		
+		<a href="/sus-api/susscores/download/#(projectId)">Download project data (csv format)</a>
+	</div>
+} else {
+	
+	<h1>The project "#(projectId)" does not have any data. </h1>
+}
+
+
+</body>
+</html>

@@ -1,125 +1,165 @@
+import Fluent
+import FluentSQLiteDriver
 import Vapor
 import Foundation
-import FluentSQLite
+
+
+struct SusScoreError: Error {
+    
+    var message: String
+}
+
 
 /// Controls basic CRUD operations on `SUSScore`s.
 final class SusController {
     
     /// Returns a list of all
-    func index(_ request: Request) throws -> Future<[SusScore]> {
-        return SusScore.query(on: request).all()
+    func index(_ request: Request) throws -> EventLoopFuture<[SusScore]> {
+        return SusScore.query(on: request.db).all()
     }
     
     
     //get a new auth key, just as a plain string; this is intended just as a utility route, when a new key is needed.
-    func getNewKey(_ request: Request) throws -> Future<String> {
-        let promise = request.eventLoop.newPromise(of: String.self)
+    func getNewKey(_ request: Request) throws -> EventLoopFuture<String> {
+        let promise = request.eventLoop.makePromise(of: String.self)
         
         let prng = Prng(seed: nil)
         
         let newKey = prng.getHexString(length: 16)
         
-        promise.succeed(result: newKey)
+        promise.succeed(newKey)
         
         return promise.futureResult
         
     }
     
-    func getProjectList(_ request: Request) throws -> Future<HTTPResponse> {
+    func getProjectList(_ request: Request) throws -> EventLoopFuture<Response> {
         
         
-        let items = request.withPooledConnection(to: .sqlite) { connection -> Future<[[SQLiteColumn:SQLiteData]]> in
+        if let sqlDb = request.db as? SQLDatabase {
             
-            return connection.raw("""
+            //running the raw sql  will return an array of a dictionary of SQLiteColumn as the key and SQLiteData as the value
+            //  get the column name by using the .name property.  the value is just directly obtained from the SQLiteData object.
+            
+            
+            let items = sqlDb.raw("""
                
             SELECT DISTINCT projectId FROM `SusScore`;
                
             """).all()
-
-        }
-        
-        //running the raw sql above will return an array of a dictionary of SQLiteColumn as the key and SQLiteData as the value
-        //  get the column name by using the .name property.  the value is just directly obtained from the SQLiteData object.
-        
-        
-        return items.flatMap { (projItems: [[SQLiteColumn:SQLiteData]]) -> Future<HTTPResponse> in
-            let projPromise = request.eventLoop.newPromise(of: HTTPResponse.self)
-                     
-            var projectNames = [String]()
             
-            projItems.forEach { projectItem in
+           
+            return items.flatMap { (projItems: [SQLRow]) -> EventLoopFuture<Response> in
                 
-                for (key, val) in projectItem {
-                    print("key: \(key.name). value: \(val)")
+                let projPromise = request.eventLoop.makePromise(of: Response.self)
+                var projectNames = [String]()
+                
+                
+                do {
                     
-                    projectNames.append(  _val.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) )
                     
-                }
-            }
+                    try projItems.forEach { projectItem in
                         
-                
-            let projData = try JSONEncoder().encode(projectNames)
-            
-            // create http response object; set body value
-            var response = HTTPResponse(status: .ok, body: String(data: projData, encoding: .utf8) ?? "{\"error\": true}" )
-            response.headers.add(name: .contentType, value: "application/json")
-         
-            projPromise.succeed(result: response)
+                        let _val: String = try projectItem.decode(column: "projectId", as: String.self)
+                        
+                        projectNames.append(  _val.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) )
+                        
+                    }
+                                
+                        
+                    let projData = try JSONEncoder().encode(projectNames)
+                    
+                    // create http response object; set body value
+                    let response = Response(status: .ok, body: Response.Body( string: String(data: projData, encoding: .utf8) ?? "{\"error\": true}") )
+                    response.headers.add(name: .contentType, value: "application/json")
+                 
+                    projPromise.succeed(response)
 
-            return projPromise.futureResult
-    
+                } catch {  // NOTE: when you don't include a param on the 'catch' (e.g., catch let err as Error), then it will be a catch ALL.
+                           // when you put a param on the catch, it tells the compiler that it won't catch every error, just the ones you have cast for that catch block.
+                    projPromise.fail(SusScoreError(message: "could not create project list from database data"))
+                }
+                    
+                return projPromise.futureResult
+        
+            }
+            
+            
+        } else {
+            throw SusScoreError(message: "database error. database may not be an sql database.")
         }
+        
+      
+        
+
+        
         
         
     }
     
     
     
-    func getProjectListFormatted(_ request: Request) throws -> Future<View> {
+    func getProjectListFormatted(_ request: Request) throws -> EventLoopFuture<View> {
         
         struct ProjectListData: Encodable {
             var projectList: [String]
             var projectCount: Int
         }
         
-        let items = request.withPooledConnection(to: .sqlite) { connection -> Future<[[SQLiteColumn:SQLiteData]]> in
+        
+        if let sqlDb = request.db as? SQLDatabase {
             
-            return connection.raw("""
+            
+            //running the raw sql  will return an array of a dictionary of SQLiteColumn as the key and SQLiteData as the value
+            //  get the column name by using the .name property.  the value is just directly obtained from the SQLiteData object.
+            
+            
+            let items = sqlDb.raw("""
                
             SELECT DISTINCT projectId FROM `SusScore`;
                
             """).all()
-
-        }
         
-        //running the raw sql above will return an array of a dictionary of SQLiteColumn as the key and SQLiteData as the value
-        //  get the column name by using the .name property.  the value is just directly obtained from the SQLiteData object.
-        
-        
-        return items.flatMap { (projItems: [[SQLiteColumn:SQLiteData]]) -> Future<View> in
-                     
-            var projectNames = [String]()
             
-            projItems.forEach { projectItem in
+            return items.flatMap { (projItems: [SQLRow]) -> EventLoopFuture<View> in
+                         
+                var projectNames = [String]()
                 
-                for (key, val) in projectItem {
-             //       print("key: \(key.name). value: \(val)")
+                do {
                     
-                    var _val: String = "\(val)"
-                    
-                      /// .replace (/(^")|("$)/g, "")  // this regex trims beginngin and ending quotes too.
-                    
-                    // FIXME: returns a description of the value rather than the value as a string
-                    projectNames.append( _val.trimmingCharacters(in: CharacterSet(charactersIn: "\""))  )
-                    
-                }
-            }
+                    try projItems.forEach { projectItem in
                         
+                        let _val: String = try projectItem.decode(column: "projectId", as: String.self)
+                        /// .replace (/(^")|("$)/g, "")  // this regex trims beginngin and ending quotes too.
+                            
+                        // FIXME: returns a description of the value rather than the value as a string
+                        projectNames.append( _val.trimmingCharacters(in: CharacterSet(charactersIn: "\""))  )
+                        
+                    }
+                            
+                    
+                    return request.view.render("project-list.html.leaf", ProjectListData(projectList: projectNames, projectCount: projectNames.count))
+
+                } catch {  // NOTE: when you don't include a param on the 'catch' (e.g., catch let err as Error), then it will be a catch ALL.
+                           // when you put a param on the catch, it tells the compiler that it won't catch every error, just the ones you have cast for that catch block.
+                    
+                    // TODO: this is really a failure condition but the teamplate wouldn't reflect that fact
+                    return request.view.render("project-list.html.leaf", ProjectListData(projectList: [String](), projectCount: 0))
+                }
+                    
                 
+                
+        
+            }
             
-            return try request.view().render("project-list.html", ProjectListData(projectList: projectNames, projectCount: projectNames.count))
-    
+        } else {
+            throw SusScoreError(message: "database error. database may not be an sql database.")
         }
+        
+        
+        
+
+        
         
         
     }
@@ -127,55 +167,65 @@ final class SusController {
     
     
     
-    func getProjectDataCsv(_ request: Request) throws -> Future<HTTPResponse> {
+    func getProjectDataCsv(_ request: Request) throws -> EventLoopFuture<Response> {
     
-        let projectId = try request.parameters.next(String.self)
+      //  let projectId = try request.parameters.next(String.self)
+    
+        guard let projectId = request.parameters.get("projectId") else {
+          throw SusScoreError(message: "cannot determine projectId")
+        }
         
-        let items = request.withPooledConnection(to: .sqlite) { connection -> Future<[SusScore]> in
-            return connection.raw("""
+        if let sqlDb = request.db as? SQLDatabase {
+            
+            let items = sqlDb.raw("""
                
             SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
                
             """).all(decoding: SusScore.self)
+            
+            
+            return items.flatMap { (scoreItems: [SusScore]) -> EventLoopFuture<Response> in
+                let csvPromise = request.eventLoop.makePromise(of: Response.self)
                 
-            // TODO: coudl include data for histogram or just freq dist bins
+                // TODO: how do I put this in an async function instead of inline ?
+                // this defeats the purpose of promises, but not sure how to solve it.
+                var scoreItems2 = [String]()
+                
+                if scoreItems.count > 0 {
+                    scoreItems2.append(scoreItems[0].csvHeader())
+                }
+                
+                
             
-        }
+                scoreItems.forEach { scoreItem in
+                    scoreItems2.append(scoreItem.asCsvString())
+                }
+                
+                // create http response object; set body value to the csv string, and set the header so the browser will download as file.
+                var response = Response(status: .ok, body: Response.Body(string: scoreItems2.joined(separator: "\n")))
+                response.headers.add(name: .contentDisposition, value: "attachment; filename=\"sus-scores-\(projectId).csv\"")
+                
+                csvPromise.succeed(response)
 
+                return csvPromise.futureResult
         
-        return items.flatMap { (scoreItems: [SusScore]) -> Future<HTTPResponse> in
-            let csvPromise = request.eventLoop.newPromise(of: HTTPResponse.self)
-            
-            // TODO: how do I put this in an async function instead of inline ?
-            // this defeats the purpose of promises, but not sure how to solve it.
-            var scoreItems2 = [String]()
-            
-            if scoreItems.count > 0 {
-                scoreItems2.append(scoreItems[0].csvHeader())
             }
             
-            
-        
-            scoreItems.forEach { scoreItem in
-                scoreItems2.append(scoreItem.asCsvString())
-            }
-            
-            // create http response object; set body value to the csv string, and set the header so the browser will download as file.
-            var response = HTTPResponse(status: .ok, body: scoreItems2.joined(separator: "\n"))
-            response.headers.add(name: .contentDisposition, value: "attachment; filename=\"sus-scores-\(projectId).csv\"")
-            
-            csvPromise.succeed(result: response)
-
-            return csvPromise.futureResult
-    
+        } else {
+            throw SusScoreError(message: "database error; database may not be a SQL database.")
         }
+        
+        
+
+        
+        
     
     
     }
     
     
     // returns a rendered html view of the project summary.
-    func getProjectSumary(_ request: Request) throws -> Future<View> {
+    func getProjectSumary(_ request: Request) throws -> EventLoopFuture<View> {
         
         struct SusProjectSummary: Codable {
             var projectId: String
@@ -187,7 +237,9 @@ final class SusController {
         
         
       
-        let projectId = try request.parameters.next(String.self)
+        guard let projectId = request.parameters.get("projectId") else {
+          throw SusScoreError(message: "cannot determine projectId")
+        }
         
         // we will round the calculated score so it is only 1 decimal place.
         let formatter = NumberFormatter()
@@ -196,32 +248,38 @@ final class SusController {
         formatter.maximumFractionDigits = 1
         
         
-        let items = request.withPooledConnection(to: .sqlite) { connection -> Future<[SusScore]> in
-            return connection.raw("""
+        if let sqlDb = request.db as? SQLDatabase {
+            let items = sqlDb.raw("""
                
             SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
                
             """).all(decoding: SusScore.self)
+            
+            
+            return items.flatMap { (scoreItems: [SusScore]) -> EventLoopFuture<View> in
                 
-            // TODO: could include data for histogram or just freq dist bins
-            
-        }
-        
-        return items.flatMap { (scoreItems: [SusScore]) -> Future<View> in
-            
-            var tmpSum = [Double]()
-            
-            scoreItems.forEach { (scoreObj: SusScore) in
-                tmpSum.append( scoreObj.calcScore() )
+                var tmpSum = [Double]()
+                
+                scoreItems.forEach { (scoreObj: SusScore) in
+                    tmpSum.append( scoreObj.calcScore() )
+                }
+                
+                let scoresSum = tmpSum.reduce(0, { val1, val2 in
+                    val1 + val2
+                })
+                
+                return request.view.render("project-summary.html.leaf", SusProjectSummary(projectId: projectId, susScoreMean: scoresSum / Double(scoreItems.count), susScoreMeanFormatted: formatter.string(from: NSNumber(value: scoresSum / Double(scoreItems.count))) ?? ""  ,  observationsCount: scoreItems.count))
+                
             }
             
-            let scoresSum = tmpSum.reduce(0, { val1, val2 in
-                val1 + val2
-            })
             
-            return try request.view().render("project-summary.html", SusProjectSummary(projectId: projectId, susScoreMean: scoresSum / Double(scoreItems.count), susScoreMeanFormatted: formatter.string(from: NSNumber(value: scoresSum / Double(scoreItems.count))) ?? ""  ,  observationsCount: scoreItems.count))
-            
+        } else {
+            throw SusScoreError(message: "database error; database may not be a SQL database.")
         }
+        
+        
+        
+        
         
         
     }
@@ -230,7 +288,7 @@ final class SusController {
     
     
     // returns a rendered html view of the project summary; with additional information.
-    func getProjectListExtended(_ request: Request) throws -> Future<View> {
+    func getProjectListExtended(_ request: Request) throws -> EventLoopFuture<View> {
         
         struct SusProjectSummary: Codable {
             var projectId: String
@@ -266,10 +324,10 @@ final class SusController {
         formatter.maximumFractionDigits = 1
         
         
-        let items = SusScore.query(on: request).all()
+        let items = SusScore.query(on: request.db).all()
         
 
-        return items.flatMap { (scoreItems: [SusScore]) -> Future<View> in
+        return items.flatMap { (scoreItems: [SusScore]) -> EventLoopFuture<View> in
             
         //    var tmpSum = [Double]()
             var uniqueProjects = [String:[Double]]()
@@ -341,7 +399,7 @@ final class SusController {
                 
             }
             
-            return try request.view().render("project-list.html", AllProjectsViewData(projectSummaries: projectSummaries, projectCount: projectSummaries.count) )
+            return request.view.render("project-list.html.leaf", AllProjectsViewData(projectSummaries: projectSummaries, projectCount: projectSummaries.count) )
 
         }
         
@@ -354,20 +412,28 @@ final class SusController {
     
    
     
-    func getProjectData(_ request: Request) throws -> Future<[SusScore]> {
+    func getProjectData(_ request: Request) throws -> EventLoopFuture<[SusScore]> {
         
-        let projectId = try request.parameters.next(String.self)
+        
+        guard let projectId = request.parameters.get("projectId") else {
+          throw SusScoreError(message: "cannot determine projectId")
+        }
         
     
-         // this is how to do raw queries with SQL
-         // see https://theswiftwebdeveloper.com/diving-into-vapor-part-4-deeper-into-fluent-30d84e19f114
-         return request.withPooledConnection(to: .sqlite) { connection -> Future<[SusScore]> in
-             return connection.raw("""
+        
+        if let sqlDb = request.db as? SQLDatabase {
+            return sqlDb.raw("""
                 
              SELECT * FROM `SusScore` WHERE projectId=="\(projectId)";
                 
              """).all(decoding: SusScore.self)
-         }
+            
+        
+        } else {
+            throw SusScoreError(message: "database error; database may not be a SQL database.")
+        }
+        
+ 
          
         //return TLXScore.query(on: request).filter(\TLXScore.projectId == projectId).all()
       
@@ -384,23 +450,27 @@ final class SusController {
     
     
     
-    func deleteProject(_ request: Request) throws -> Future<[SusScore]> {
+    func deleteProject(_ request: Request) throws -> EventLoopFuture<[SusScore]> {
         
-        let projectId = try request.parameters.next(String.self)
         
+        guard let projectId = request.parameters.get("projectId") else {
+          throw SusScoreError(message: "cannot determine projectId")
+        }
 
-         // this is how to do raw queries with SQL
-         // see https://theswiftwebdeveloper.com/diving-into-vapor-part-4-deeper-into-fluent-30d84e19f114
-         return request.withPooledConnection(to: .sqlite) { connection -> Future<[SusScore]> in
-             return connection.raw("""
+         
+        if let sqlDb = request.db as? SQLDatabase {
+            
+            return sqlDb.raw("""
                
                DELETE FROM `SusScore` WHERE projectId=="\(projectId)";
                 
                """).all(decoding: SusScore.self)
-         }
-         
-        //return TLXScore.query(on: request).filter(\TLXScore.projectId == projectId).all()
-      
+            
+        } else {
+            throw SusScoreError(message: "database error; database may not be a SQL database.")
+        }
+        
+        
 
     }
     
@@ -408,17 +478,31 @@ final class SusController {
     
 
     /// Saves a decoded `Sus` to the database.
-    func create(_ req: Request) throws -> Future<SusScore> {
-        return try req.content.decode(SusScore.self).flatMap { score in
-            return score.save(on: req)
-        }
+    func create(_ req: Request) throws -> EventLoopFuture<SusScore> {
+        
+        
+        let sus = try req.content.decode(SusScore.self)
+        return sus.save(on: req.db).map { sus }
+        
     }
 
     /// Deletes a parameterized `Sus`.
-    func delete(_ req: Request) throws -> Future<HTTPStatus> {
-        return try req.parameters.next(SusScore.self).flatMap { score in
-            return score.delete(on: req)
-        }.transform(to: .ok)
+    // pass in the id of item to delete with name `susScoreId`
+    func delete(_ req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        
+        guard let susScoreId = req.parameters.get("susScoreId") else {
+          throw SusScoreError(message: "cannot determine projectId")
+        }
+        
+       // let susScoreIdInt = Int(susScoreId)
+        let susScoreIduid = UUID(susScoreId)
+        
+        return SusScore.find(susScoreIduid, on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .flatMap { $0.delete(on: req.db) }
+            .transform(to: .ok)
+        
+
     }
 }
 

@@ -1,26 +1,22 @@
 import Vapor
 
 /// Register your application's routes here.
-public func routes(_ router: Router) throws {
+public func routes(_ app: Application) throws {
 
-    // Basic "It works" example
-   // router.get("sus-api") { req in
-   //     return "SUS API works!"
-  //  }
 
     let susController = SusController()
     
 
-    router.get("sus-api", use: susController.getProjectListExtended)
-    router.get("sus-api/susscores", use: susController.index)
-    router.get("sus-api/susscores/", String.parameter, use: susController.getProjectData)
-    router.get("sus-api/susscores/download", String.parameter, use: susController.getProjectDataCsv)
+    app.get("sus-api", use: susController.getProjectListExtended)
+    app.get("sus-api", "susscores", use: susController.index)
+    app.get("sus-api", "susscores", ":projectId", use: susController.getProjectData)
+    app.get("sus-api", "susscores", "download", ":projectId", use: susController.getProjectDataCsv)
     
-    router.get("sus-api/util/get-new-auth-key", use: susController.getNewKey)
+    app.get("sus-api", "util", "get-new-auth-key", use: susController.getNewKey)
     
-    router.post("sus-api/susscore", use: susController.create)
-    router.delete("sus-api/susscore", SusScore.parameter, use: susController.delete)
+    app.post("sus-api", "susscore", use: susController.create)
+    app.delete("sus-api", "susscore", ":susScore", use: susController.delete)
     
-    router.get("sus-api/susscores/summary", String.parameter, use: susController.getProjectSumary)
+    app.get("sus-api", "susscores", "summary", ":projectId", use: susController.getProjectSumary)
     
 }
